@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Fever Curve Regression Lab</title>
+<meta name="description" content="Interactive Fever Curve Regression lab and quiz: Patient Zero's 48-hour fever, regression models, rates of change, and inverse functions.">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: school black/gold masthead → explorer (chart + control panel, tabbed by worksheet step) → quiz in one reading column */
+:root{
+  --bg:#f5f6f4; --surface:#ffffff; --ink:#151617; --muted:#5b5f63; --faint:#8a8e92; --line:#dcdfda; --grid:#e9ebe7;
+  --gold:#f2c200; --goldink:#8a6d00; --band:#111111; --fever:#c2362b;
+  --ok:#1d7a4a; --okbg:#e6f3ec; --badbg:#fbeae8; --chip:#eef0ec;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s7:#6250d6;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121314; --surface:#1a1a19; --ink:#f0efec; --muted:#b4b3ab; --faint:#85847d; --line:#34353a; --grid:#26272a;
+  --gold:#f2c200; --goldink:#f2c200; --band:#000; --fever:#ef6b5f;
+  --ok:#5fcf93; --okbg:#173326; --badbg:#3a1d1a; --chip:#26272a;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s7:#9085e9; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121314; --surface:#1a1a19; --ink:#f0efec; --muted:#b4b3ab; --faint:#85847d; --line:#34353a; --grid:#26272a;
+  --gold:#f2c200; --goldink:#f2c200; --band:#000; --fever:#ef6b5f;
+  --ok:#5fcf93; --okbg:#173326; --badbg:#3a1d1a; --chip:#26272a;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s7:#9085e9; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.narrow{max-width:780px}
+.mast{background:var(--band);color:#fff}
+.mast .wrap{padding-block:26px 22px;display:grid;gap:6px}
+.eyebrow{font-family:var(--display);letter-spacing:.08em;text-transform:uppercase;font-size:15px}
+.mast .eyebrow{color:var(--gold)}
+h1{font-family:var(--display);font-size:clamp(34px,6vw,50px);line-height:1;margin:0;text-wrap:balance}
+.mast p{margin:6px 0 0;color:#d6d6d2;max-width:68ch}
+.std{font-family:var(--mono);font-size:12px;color:#bdbdb7}
+h2{font-family:var(--display);font-size:30px;line-height:1.05;margin:0;text-wrap:balance}
+h3{font-family:var(--display);font-size:21px;margin:0;letter-spacing:.01em}
+.sec{padding-block:30px 0}
+.lede{color:var(--muted);max-width:70ch;margin:6px 0 0}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+@media (max-width:640px){.tabs{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}.tab{flex:none}}
+.tab{font:inherit;font-weight:700;font-size:15px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:9px 14px;border-radius:999px;cursor:pointer;display:flex;gap:8px;align-items:center}
+.tab .k{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tab[aria-selected="true"] .k{color:var(--gold)}
+.lab{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;margin-top:14px;align-items:start}
+@media (max-width:880px){.lab{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;min-width:0}
+.chartcard{padding:12px 12px 6px;position:relative}
+.charthead{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 14px;align-items:baseline;padding:2px 4px 8px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:14px;height:3px;border-radius:2px;display:inline-block}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--ink);display:inline-block}
+svg.chart{width:100%;height:auto;display:block;touch-action:pan-y}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:13px;padding:7px 9px;border-radius:4px;font-family:var(--mono);line-height:1.45;white-space:nowrap;transform:translate(-50%,-100%);z-index:2}
+.tip b{font-family:var(--body)}
+.panel{display:grid;gap:14px}
+.panel p{margin:0}
+.read{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.stat{background:var(--chip);border-radius:4px;padding:8px 10px;min-width:0}
+.stat .l{font-size:13px;color:var(--muted);letter-spacing:.02em;font-family:var(--display)}
+.stat .v{font-family:var(--mono);font-size:19px;font-weight:700;font-variant-numeric:tabular-nums}
+.stat .s{font-size:12.5px;color:var(--muted)}
+.stat.wide{grid-column:1/-1}
+.ctl{display:grid;gap:4px}
+.ctl label{font-weight:700;font-size:14px;display:flex;justify-content:space-between;gap:8px}
+.ctl label output{font-family:var(--mono);font-weight:500}
+input[type=range]{width:100%;accent-color:var(--fever)}
+.eq{font-family:var(--mono);font-size:13.5px;background:var(--chip);padding:8px 10px;border-radius:4px;overflow-x:auto;white-space:nowrap}
+.work{font-family:var(--mono);font-size:13px;line-height:1.7;background:var(--chip);padding:10px 12px;border-radius:4px;overflow-x:auto}
+.work div{white-space:nowrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chipbtn{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:5px 10px;border-radius:999px;cursor:pointer;font-family:var(--mono)}
+.chipbtn:hover{border-color:var(--ink)}
+.pill{display:inline-block;font-family:var(--display);letter-spacing:.05em;text-transform:uppercase;font-size:13px;padding:2px 8px;border-radius:3px;border:1px solid currentColor}
+.pill.up{color:var(--fever)} .pill.down{color:var(--s1)} .pill.flat{color:var(--goldink)} .pill.ok{color:var(--ok)} .pill.no{color:var(--muted)}
+.mods{display:grid;gap:8px}
+.mod{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;padding:10px;border:1px solid var(--line);border-radius:4px;cursor:pointer;align-items:start}
+.mod input{margin-top:5px}
+.mod .nm{font-weight:700;display:flex;align-items:center;gap:8px}
+.mod .eqs{font-family:var(--mono);font-size:12.5px;color:var(--muted);overflow-x:auto;white-space:nowrap}
+.meter{height:6px;background:var(--grid);border-radius:3px;overflow:hidden;margin-top:4px}
+.meter i{display:block;height:100%;border-radius:3px}
+.r2{font-family:var(--mono);font-size:13px}
+.mod .why{grid-column:2;font-size:13.5px;color:var(--muted)}
+.note{font-size:14px;color:var(--muted)}
+.hint{border-left:3px solid var(--gold);padding:4px 0 4px 12px;font-size:14.5px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select{font:inherit;padding:6px 8px;border-radius:4px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.tbl{overflow-x:auto;margin-top:10px}
+table{border-collapse:collapse;font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+td,th{border:1px solid var(--line);padding:4px 10px;text-align:right}
+th{background:var(--band);color:var(--gold);font-family:var(--display);font-size:14px;letter-spacing:.04em}
+td.hi{color:var(--fever);font-weight:700}
+details summary{cursor:pointer;font-weight:700}
+/* quiz */
+label.f{display:grid;gap:6px;font-weight:700}
+input[type=text]{font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink)}
+section.part{margin-top:34px}
+.parthead{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:end;border-bottom:3px solid var(--gold);padding-bottom:4px}
+.part h3{font-size:24px}
+.explore{font:inherit;font-size:13px;font-weight:700;border:1px solid var(--ink);background:transparent;color:var(--ink);padding:4px 10px;border-radius:999px;cursor:pointer}
+.part .desc{color:var(--muted);margin:8px 0 10px;font-size:15px}
+.q{display:grid;gap:10px;padding-block:18px;border-bottom:1px solid var(--line)}
+.q:last-child{border-bottom:0}
+.qp{font-weight:700;display:flex;gap:10px}
+.qp .n{font-family:var(--mono);color:var(--fever);flex:none;min-width:2ch}
+.qp span:last-child{min-width:0}
+.opts{display:grid;gap:8px;padding-left:30px}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:9px 12px;border:1px solid var(--line);border-radius:4px;cursor:pointer;background:var(--surface)}
+.opt:hover{border-color:var(--ink)}
+.opt input{margin-top:4px;accent-color:var(--fever)}
+.opt.right{background:var(--okbg);border-color:var(--ok)}
+.opt.wrong{background:var(--badbg);border-color:var(--fever)}
+textarea{font:inherit;width:100%;box-sizing:border-box;min-height:120px;padding:10px;border:1px solid var(--line);border-radius:4px;background:var(--surface);color:var(--ink)}
+.paraw,.fb{padding-left:30px}
+.fb{font-size:15px}
+.fb .tag{font-family:var(--display);letter-spacing:.06em;text-transform:uppercase;font-size:14px}
+.fb .tag.y{color:var(--ok)} .fb .tag.n{color:var(--fever)}
+.pts{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:30px}
+button.main{font:inherit;font-weight:700;padding:11px 18px;border-radius:4px;border:2px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer}
+button.ghost{background:transparent;color:var(--ink)}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.score{margin-top:22px;display:grid;gap:6px}
+.score .big{font-family:var(--display);font-size:44px;line-height:1}
+.msg{font-size:14px;color:var(--fever)}
+footer{padding-block:40px 60px}
+.gloss{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:12px;margin-top:16px}
+.def{display:grid;gap:8px;align-content:start;scroll-margin-top:16px}
+.def:target{outline:3px solid var(--gold);outline-offset:2px}
+.def .sym{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--fever);overflow-x:auto;white-space:nowrap}
+.def h3{font-size:22px}
+.def p{margin:0;font-size:15px}
+.def .ex{font-size:14px;border-top:1px dashed var(--line);padding-top:8px}
+.def .ex b{font-family:var(--display);letter-spacing:.05em;text-transform:uppercase;font-size:13px;color:var(--muted);font-weight:700}
+.def .see{justify-self:start}
+.def .work div{white-space:normal}
+.words{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--muted)}
+.words a{font-family:var(--mono);font-size:12.5px;color:var(--ink);border:1px dashed var(--faint);padding:2px 8px;border-radius:999px;text-decoration:none}
+.words a:hover{border-style:solid}
+.gate{display:grid;gap:12px}
+.gate .row input{flex:1 1 220px}
+.vcode{font-family:var(--mono);font-size:13px;color:var(--muted)}
+</style>
+
+</head>
+<body>
+<header class="mast"><div class="wrap">
+  <div class="eyebrow">Revolution School · Biology × Algebra 2/Precalc-Trig · Activity #2</div>
+  <h1>Fever Curve Regression Lab</h1>
+  <p>Explore Patient Zero's 48-hour fever with the same models you built in Desmos. Compare the fits, walk along the curve, solve it backwards, and build your own parabola. Then take the quiz below.</p>
+  <div class="std">NGSS HS-LS1-3 · CCSS F-BF.1, S-ID.6</div>
+</div></header>
+
+<main>
+<section class="sec wrap" id="lab">
+  <h2>The Explorer</h2>
+  <p class="lede">Each tab matches a step on your worksheet. Hover or tap the graph to read any point.</p>
+  <div class="tabs" role="tablist" aria-label="Explorer views">
+    <button class="tab" role="tab" id="tab-models" data-tab="models"><span class="k">STEP 2</span>Compare models</button>
+    <button class="tab" role="tab" id="tab-walk" data-tab="walk"><span class="k">STEPS 3–4</span>Walk the curve</button>
+    <button class="tab" role="tab" id="tab-rate" data-tab="rate"><span class="k">RATES</span>Rising vs. falling</button>
+    <button class="tab" role="tab" id="tab-inv" data-tab="inv"><span class="k">STEP 5</span>Solve backwards</button>
+    <button class="tab" role="tab" id="tab-build" data-tab="build"><span class="k">PARAMETERS</span>Build your own</button>
+  </div>
+  <div class="lab">
+    <div class="card chartcard">
+      <div class="charthead"><h3 id="ctitle">Patient Zero, temperature vs. time</h3><div class="legend" id="legend"></div></div>
+      <svg class="chart" id="chart" viewBox="0 0 760 430" role="img" aria-label="Scatter plot of temperature versus time with model curves"></svg>
+      <div class="tip" id="tip" hidden></div>
+    </div>
+    <div class="card panel" id="panel" role="tabpanel"></div>
+  </div>
+  <div class="card" style="margin-top:16px"><details><summary>Patient Zero temperature log (table view)</summary><div class="tbl"><table id="data"></table></div></details></div>
+</section>
+
+<section class="sec wrap" id="ideas">
+  <h2>Key Ideas</h2>
+  <p class="lede">What each symbol and term means, how to calculate it, and what it says about Patient Zero. The dashed chips under the explorer link here.</p>
+  <div class="gloss" id="gloss"></div>
+</section>
+
+<section class="sec wrap narrow" id="quizsec">
+  <h2>Check Your Understanding</h2>
+  <p class="lede">Use the Patient Zero temperature log, your plotted graph, and your Desmos/Google Sheets regressions (quadratic and exponential, plus the rising- and falling-phase linear fits) to answer each question. Round to two decimal places unless a question says otherwise. Multiple-choice items are 1 point; written responses are 3 points and are scored with the PCED rubric. Stuck? Use the <b>Explore</b> button on each part to open the matching view, or review the Key Ideas above.</p>
+  <div class="card gate" style="margin-top:16px">
+    <label class="f" for="sname">Your full name (First Last)</label>
+    <div class="row"><input type="text" id="sname" autocomplete="name" placeholder="First Last"><button id="start" class="main" type="button">Start my quiz</button></div>
+    <p class="note" id="gatenote" style="margin:0">Each student gets their own version: questions appear in a different order, answer choices are shuffled, and several questions use different hours and temperatures. Type your name exactly as your teacher has it. The same name always opens the same version.</p>
+  </div>
+  <div id="quiz"></div>
+  <div class="bar" id="qbar" hidden>
+    <button id="submit" class="main" type="button">Submit and check answers</button>
+    <button id="reset" class="main ghost" type="button">Start over</button>
+    <span class="msg" id="msg" aria-live="polite"></span>
+  </div>
+  <div class="score card" id="score" hidden>
+    <div class="eyebrow" style="color:var(--muted)">Multiple-choice score</div>
+    <div class="big" id="big"></div>
+    <div class="note" id="sub"></div>
+    <div class="bar" style="margin-top:8px"><button id="copy" class="main" type="button">Copy my results</button><span class="note" id="copied" aria-live="polite"></span></div>
+    <p class="note" id="sent" aria-live="polite" style="margin:0"></p>
+    <textarea id="out" readonly hidden aria-label="Your results"></textarea>
+  </div>
+</section>
+<footer class="wrap narrow note">Models are the class Desmos and Google Sheets regressions. Set point = 98.6 °F; fever threshold = 100.4 °F.</footer>
+</main>
+<form name="fever-quiz" method="POST" data-netlify="true" netlify-honeypot="bot-field" hidden>
+  <input type="hidden" name="form-name" value="fever-quiz">
+  <input name="bot-field"><input name="student"><input name="version"><input name="mc_score"><input name="subject"><textarea name="results"></textarea>
+</form>
+
+<script>
+const B = {"title": "#2 Fever Curve Regression — Quiz", "intro": "Use the Patient Zero temperature log, your plotted graph, and your Desmos/Google Sheets regressions (quadratic and exponential, plus the rising- and falling-phase linear fits) to answer each question. Round to two decimal places unless a question says otherwise. Multiple-choice items are 1 point; written responses are 3 points and are scored with the PCED rubric.", "data": [[0, 99.1], [2, 99.6], [4, 100.3], [6, 100.9], [8, 101.2], [10, 101.6], [12, 102.2], [14, 102.4], [16, 102.5], [18, 102.8], [20, 102.8], [22, 102.9], [24, 103.0], [26, 102.7], [28, 102.7], [30, 102.7], [32, 102.4], [34, 102.3], [36, 101.9], [38, 101.5], [40, 101.4], [42, 100.7], [44, 100.2], [46, 99.5], [48, 98.9]], "sections": [{"title": "Part 1 · Reading the Data (Task Step 1)", "desc": "Use your plotted points and the temperature log.", "qs": [{"type": "mc", "prompt": "What was the patient's temperature at t = 0 hr, and how far was it from the 98.6 °F set point?", "options": ["98.9 °F, 0.3 °F above the set point", "98.6 °F, exactly at the set point", "99.1 °F, 0.5 °F above the set point", "99.6 °F, 1.0 °F above the set point"], "answer": 2, "explain": "The log starts at 99.1 °F. |99.1 − 98.6| = 0.5 °F, so the fever was already starting at the first reading."}, {"type": "mc", "prompt": "What was the highest recorded temperature, and when did it occur?", "options": ["102.9 °F at hour 22", "103.0 °F at hour 30", "102.8 °F at hour 18", "103.0 °F at hour 24"], "answer": 3, "explain": "The single highest reading in the log is 103.0 °F at t = 24 hr, the midpoint of the 48-hour episode."}, {"type": "mc", "prompt": "The clinical fever threshold is 100.4 °F. Between which two readings does the temperature first rise above 100.4 °F?", "options": ["Hour 2 (99.6 °F) and hour 4 (100.3 °F)", "Hour 4 (100.3 °F) and hour 6 (100.9 °F)", "Hour 6 (100.9 °F) and hour 8 (101.2 °F)", "Hour 0 (99.1 °F) and hour 2 (99.6 °F)"], "answer": 1, "explain": "100.3 °F at hour 4 is still just under 100.4 °F; 100.9 °F at hour 6 is above it. The crossing happens at about hour 4.4–5."}, {"type": "mc", "prompt": "About how long did the patient stay above the 100.4 °F fever threshold?", "options": ["About 14 hours", "The full 48 hours", "About 38 hours (≈ hour 5 to hour 43)", "About 24 hours"], "answer": 2, "explain": "The temperature crosses 100.4 °F going up near hour 4.4 and coming down near hour 43.1 (100.7 °F at hr 42, 100.2 °F at hr 44): about 38–39 hours."}, {"type": "mc", "prompt": "During which window did the temperature stay at or above 102.7 °F (the peak plateau)?", "options": ["Only at hour 24", "Hours 18–30", "Hours 12–36", "Hours 10–40"], "answer": 1, "explain": "Readings from hour 18 (102.8 °F) through hour 30 (102.7 °F) all stay between 102.7 and 103.0 °F, a 12-hour plateau. At hour 32 it drops to 102.4 °F."}]}, {"title": "Part 2 · Choosing the Best Model (Task Step 2)", "desc": "Compare your Desmos results. Exponential: y = 101.60836 · 0.999967^x, R² = 0.001467. Quadratic: y = −0.00680416x² + 0.323215x + 99.1053, R² = 0.9939.", "qs": [{"type": "mc", "prompt": "The exponential regression has R² = 0.001467. What does that value tell you?", "options": ["Temperature is decreasing exponentially over time", "The data must contain a recording error", "The model explains only about 0.15% of the variation in temperature, so it is almost useless here", "The model explains 99.85% of the variation"], "answer": 2, "explain": "R² is the fraction of variation the model explains. 0.001467 ≈ 0.15%. The exponential curve is nearly a flat line at about 101.6 °F that misses the rise and fall."}, {"type": "mc", "prompt": "Why can't an exponential model y = a·bˣ fit this fever data well?", "options": ["Exponential functions cannot be used with temperature", "Exponential functions always pass through the origin", "The data has too few points for an exponential fit", "An exponential function only increases or only decreases; it cannot rise to a peak and then fall"], "answer": 3, "explain": "y = a·bˣ is monotonic: it grows when b > 1 and decays when b < 1. A fever rises, peaks, and falls, so it needs a function with a turning point, such as a quadratic."}, {"type": "mc", "prompt": "Which model fits the fever data better, and what is the evidence?", "options": ["They fit equally well because both use all 25 data points", "Quadratic: R² = 0.9939 means it explains about 99.4% of the variation", "Exponential: it stays closer to 98.6 °F", "Exponential: its R² value is smaller, so its error is smaller"], "answer": 1, "explain": "The quadratic's R² (0.9939) is far higher than the exponential's (0.0015). On the graph, the parabola passes through or right next to every point."}, {"type": "mc", "prompt": "A student fits ONE linear regression to all 48 hours and gets slope ≈ −0.003 °F/hr with R² ≈ 0.0015. Why is a single line such a poor fit?", "options": ["The temperature never changed during the 48 hours", "A linear model can only be used for decreasing data", "The rising half and the falling half cancel out, so the best-fit line is nearly flat at the mean (≈ 101.5 °F)", "The slope is negative, which means the patient got colder the whole time"], "answer": 2, "explain": "A line has one constant slope. Positive slopes in hours 0–24 and negative slopes in hours 24–48 average out to about zero, leaving a flat line that explains almost none of the curve."}, {"type": "mc", "prompt": "Two linear fits, one for each phase, give R² = 0.915 (rising, hr 0–24) and R² = 0.918 (falling, hr 26–48). The quadratic gives R² = 0.9939 for all 48 hours. Which conclusion is best supported?", "options": ["The linear models are better because R > 0.95 for both", "Linear models are always better because they are simpler", "Both approaches fit equally well", "The quadratic is the better model: one equation fits the whole episode more tightly, while the lines miss the curved plateau near the peak"], "answer": 3, "explain": "The quadratic explains more variation (99.4% vs ≈ 92%) with a single equation. Watch out: r ≈ 0.956 is the correlation coefficient, not R². R² is r squared ≈ 0.915."}, {"type": "mc", "prompt": "In the quadratic f(t) = −0.00680416t² + 0.323215t + 99.1053, what does the negative value of a tell you?", "options": ["The model has no turning point", "The parabola opens downward, so the model has a maximum (a peak temperature)", "The temperature was below 98.6 °F at the start", "The fever was decreasing the whole time"], "answer": 1, "explain": "When a < 0 the parabola opens downward and its vertex is a maximum, matching the peak of the fever."}, {"type": "mc", "prompt": "What does the constant c = 99.1053 represent physiologically?", "options": ["The rate at which temperature rises each hour", "The peak temperature of the fever", "The body's normal set point", "The model's predicted temperature at t = 0, the start of the log"], "answer": 3, "explain": "f(0) = c = 99.1053 °F, which matches the first recorded reading of 99.1 °F."}]}, {"title": "Part 3 · Peak Temperature (Task Step 3)", "desc": "Use the vertex of your quadratic model.", "qs": [{"type": "mc", "prompt": "Using t = −b / (2a), at what time does the model predict the peak temperature?", "options": ["t ≈ 49.02 hr", "t ≈ 11.88 hr", "t ≈ 23.75 hr", "t ≈ 47.50 hr"], "answer": 2, "explain": "t = −0.323215 / (2 × −0.00680416) = 0.323215 / 0.01360832 ≈ 23.75 hr."}, {"type": "mc", "prompt": "What peak temperature does the model predict, f(23.75)?", "options": ["Exactly 103.00 °F", "≈ 99.11 °F", "≈ 102.94 °F", "≈ 101.53 °F"], "answer": 2, "explain": "f(23.75) = −0.00680416(23.75)² + 0.323215(23.75) + 99.1053 ≈ 102.94 °F. (101.53 °F is the average of all readings, not the peak.)"}, {"type": "mc", "prompt": "Sanity check: compare the model's peak (≈ 102.94 °F at t ≈ 23.75 hr) with the raw data's peak (103.0 °F at t = 24 hr). What do you conclude?", "options": ["The model is wrong because it does not give exactly 103.0 °F", "The peak cannot be estimated from a regression", "The raw data must be wrong because it does not match the model", "They agree closely (within 0.06 °F and 0.25 hr), so the model is reliable near the peak"], "answer": 3, "explain": "A regression smooths the data, so a small gap is expected. A 0.06 °F difference is smaller than the precision of most thermometers."}]}, {"title": "Part 4 · Deviation from the Set Point (Task Step 4)", "desc": "Deviation = |f(t) − 98.6|", "qs": [{"type": "mc", "prompt": "Using the model, what is the maximum deviation |f(t) − 98.6|, and when does it occur?", "options": ["≈ 4.34 °F at t ≈ 23.75 hr", "≈ 4.40 °F at t = 0 hr", "≈ 0.50 °F at t = 0 hr", "≈ 0.34 °F at t = 48 hr"], "answer": 0, "explain": "The deviation is largest at the peak: |102.94 − 98.6| ≈ 4.34 °F. The raw data gives |103.0 − 98.6| = 4.4 °F at hour 24, which is consistent."}, {"type": "mc", "prompt": "Why do we use absolute value, |f(t) − 98.6|, to measure deviation?", "options": ["It measures the distance from the set point whether the temperature is above or below 98.6 °F", "It removes the effect of the set point", "It makes the temperature larger so the fever is easier to see", "It converts °F to °C"], "answer": 0, "explain": "Homeostasis cares about how far the body is from its set point in either direction. Hypothermia at 94.6 °F and fever at 102.6 °F are both 4 °F away."}]}, {"title": "Part 5 · Rate of Change: Rising vs. Falling", "desc": "Rising phase (hr 0–24): T = 0.1621t + 99.69, R² = 0.915. Falling phase (hr 26–48): T = −0.1743t + 107.86, R² = 0.918.", "qs": [{"type": "mc", "prompt": "What does the slope 0.1621 in the rising-phase model mean?", "options": ["Temperature rose 0.16 °F over the full 24 hours", "On average, temperature rose about 0.16 °F every hour during hours 0–24", "The temperature at hour 0 was 0.16 °F", "The fever lasted 16.2 hours"], "answer": 1, "explain": "Slope = change in temperature per hour. Over 24 hours that adds up to about 0.1621 × 24 ≈ 3.9 °F, matching 99.1 → 103.0 °F."}, {"type": "mc", "prompt": "Using the raw data, what is the average rate of change from hour 0 to hour 24?", "options": ["99.1 ÷ 24 ≈ 4.13 °F/hr", "(103.0 − 99.1) ÷ 24 ≈ 0.16 °F/hr", "(103.0 − 98.6) ÷ 24 ≈ 0.18 °F/hr", "103.0 − 99.1 = 3.9 °F/hr"], "answer": 1, "explain": "Average rate of change = Δy / Δx = 3.9 °F ÷ 24 hr ≈ 0.1625 °F/hr, very close to the regression slope of 0.1621."}, {"type": "mc", "prompt": "Compare the rising slope (+0.1621 °F/hr) with the falling slope (−0.1743 °F/hr). Which statement is correct?", "options": ["The falling rate is negative, so the patient was getting worse", "The temperature rose faster than it fell, because 0.1621 > −0.1743", "The rates are exactly the same", "The temperature fell slightly faster than it rose (0.174 vs. 0.162 °F/hr in size)"], "answer": 3, "explain": "Compare magnitudes: |−0.1743| = 0.1743 > 0.1621. Recovery was slightly faster than onset. A negative slope during recovery is a good sign, not a worse one."}, {"type": "mc", "prompt": "Between hours 18 and 30, the rate of change is close to 0. What does that mean biologically?", "options": ["The temperature leveled off: the body was holding steady at a new, higher set point", "The thermometer stopped working", "The body lost the ability to regulate temperature", "The patient was cooling down fastest during this time"], "answer": 0, "explain": "A near-zero rate means temperature is stable. The body is actively holding a target, just a higher one. This is also where the vertex of the parabola sits."}, {"type": "mc", "prompt": "The falling-phase equation has a y-intercept of 107.86. Does this mean the patient was 107.86 °F at hour 0?", "options": ["Yes, the intercept always gives the starting value", "No. That model only applies to hours 26–48, so using it at t = 0 is extrapolation outside its domain", "No, the intercept is the peak temperature", "Yes, the patient's fever started at 107.86 °F"], "answer": 1, "explain": "The falling line was fit only to hours 26–48. Extending it back to t = 0 gives a number with no physical meaning. The actual hour-0 reading was 99.1 °F."}]}, {"title": "Part 6 · Inverse Reasoning: Return to Baseline (Task Step 5)", "desc": "Solve f(t) = k for t, which is evaluating f⁻¹(k).", "qs": [{"type": "mc", "prompt": "Setting f(t) = 98.6 and using the quadratic formula gives t ≈ 49.02 and t ≈ −1.52. Which value is f⁻¹(98.6), and why?", "options": ["Neither, because the model never reaches 98.6 °F", "t ≈ −1.52 hr, because it is the smaller value", "Both, because a quadratic always has two answers", "t ≈ 49.02 hr, because t ≈ −1.52 is before the first reading and outside the model's domain"], "answer": 3, "explain": "Time since the first reading can't be negative here, so we reject t ≈ −1.52. The model predicts the return to 98.6 °F at about 49 hours, one hour after the last reading."}, {"type": "mc", "prompt": "\"Within 0.5 °F of baseline\" means f(t) = 99.1. Using the model, when does the temperature drop back to 99.1 °F?", "options": ["t ≈ 43.09 hr", "t ≈ 47.52 hr", "t ≈ 23.75 hr", "t ≈ 49.02 hr"], "answer": 1, "explain": "Solve −0.00680416t² + 0.323215t + 99.1053 = 99.1. The positive root on the falling side is t ≈ 47.5 hr. (43.09 hr is when it falls below 100.4 °F.)"}, {"type": "para", "prompt": "Explain in your own words why finding f⁻¹(98.6) means solving the regression equation for t instead of plugging in a value of t.", "sample": "f(t) takes a time and gives a temperature. Here we already know the temperature (98.6 °F) and want the time, so we run the function backwards: set f(t) = 98.6 and solve for t (with the quadratic formula). Plugging in a t would only tell us the temperature at a time we already chose. Because a parabola gives two solutions, we keep the one inside the domain (t ≈ 49 hr)."}]}, {"title": "Part 7 · Biology Connection & Treatment", "desc": "Connect the shape of the curve to homeostasis and the hypothalamic set point.", "qs": [{"type": "mc", "prompt": "Which feature of the curve best supports describing a fever as a regulated shift in set point rather than a loss of temperature control?", "options": ["Temperature that keeps rising with no limit", "A smooth rise, a stable plateau, and a smooth return to normal, the pattern of a system steering toward a new target and back", "Temperature that jumps up and down unpredictably", "Temperature that stays exactly at 98.6 °F"], "answer": 1, "explain": "Loss of control would look erratic or runaway. Instead the curve rises in a controlled way, holds steady near 103 °F, and comes back down: the hypothalamus raised its target, then lowered it."}, {"type": "mc", "prompt": "The temperature held at a plateau (hours 18–30) and then fell steadily at about 0.17 °F/hr until it was normal at hour 48. Which explanation is MOST consistent with this pattern?", "options": ["The fever simply stopped with no change in the set point", "An ice bath at hour 24 that instantly cooled the patient", "The patient became dehydrated, so the temperature dropped", "An antipyretic (such as acetaminophen or ibuprofen) given around the peak and repeated on schedule, and/or the immune system clearing the infection, lowered the set point so the body shed heat gradually"], "answer": 3, "explain": "Antipyretics block prostaglandin production in the hypothalamus, lowering the set point. The body then loses heat through sweating and vasodilation, giving a steady decline. An ice bath would cause an abrupt drop, and one dose lasts only 4–6 hours, so a steady 22-hour decline suggests repeated doses, the infection resolving, or both."}, {"type": "mc", "prompt": "Suppose the patient were cooled with ice packs at hour 24 WITHOUT any medicine to lower the set point. What would the body most likely do?", "options": ["Shiver and constrict blood vessels to fight the cooling and defend the higher set point", "Let the temperature drop and stay at 98.6 °F", "Stop producing heat entirely", "Sweat more to cool down even faster"], "answer": 0, "explain": "If the set point is still ~103 °F, the hypothalamus reads 'too cold' and triggers heat-gain responses. This is strong evidence that fever is regulated, not a malfunction."}, {"type": "para", "prompt": "Explain, in terms of the regression model, why a fever is best described as a temporary shift in set point rather than a loss of temperature control.", "sample": "The quadratic fits the data almost perfectly (R² = 0.9939), so temperature changed in a smooth, predictable way, not randomly. The parabola rises, reaches a maximum at t ≈ 23.75 hr (≈ 102.94 °F), and returns to 98.6 °F at t ≈ 49 hr. The near-zero rate of change around the vertex shows the body holding a new, higher target. The return to baseline shows the set point being reset. A loss of control would look erratic or keep climbing."}, {"type": "para", "prompt": "What do you think the treatment was, and when was it most likely given? Use at least TWO pieces of evidence from the data or your models (for example: the plateau, the rate of change, the timing of the decline).", "sample": "An antipyretic such as acetaminophen or ibuprofen was likely started near the peak, around hours 24–30, possibly along with the immune system clearing the infection. Evidence: (1) the temperature stopped rising and held at about 102.7–103.0 °F from hour 18 to 30; (2) after hour 30 it fell steadily at about −0.17 °F/hr with no sudden drop, which fits a lowered set point and gradual heat loss rather than external cooling; (3) the decline continued for about 18 hours without rebounding, which suggests repeated doses or that the cause of the fever was resolving."}]}]};
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const D = B.data, TS = D.map(d=>d[0]), YS = D.map(d=>d[1]);
+const SP = 98.6, FT = 100.4;
+const QA=-0.00680416, QB=0.323215, QC=99.1053;
+const MODELS = {
+  quad:{name:'Quadratic', color:'--s1', f:t=>QA*t*t+QB*t+QC, dom:[0,50],
+        eq:'f(t) = −0.00680416t² + 0.323215t + 99.1053',
+        why:'Opens downward (a < 0), so it has one peak. Rises, levels off, falls: the shape of the data.'},
+  exp:{name:'Exponential', color:'--s2', f:t=>101.60836*Math.pow(0.999967,t), dom:[0,50],
+        eq:'f(t) = 101.60836 · 0.999967ᵗ',
+        why:'Can only go up or only go down. With b ≈ 1 it is almost a flat line at ~101.6 °F.'},
+  lin:{name:'One line (all 48 hr)', color:'--s3', f:t=>-0.00338462*t+101.60923, dom:[0,50], dash:'6 5',
+        eq:'f(t) = −0.0034t + 101.61',
+        why:'One constant slope. The rising and falling halves cancel, leaving a nearly flat line.'},
+  two:{name:'Two lines (by phase)', color:'--s3', pieces:[{f:t=>0.1621*t+99.69,dom:[0,24]},{f:t=>-0.1743*t+107.86,dom:[26,48]}],
+        eq:'Rise: 0.1621t + 99.69 (0–24) · Fall: −0.1743t + 107.86 (26–48)',
+        why:'Good inside each phase, but a straight line cuts across the rounded peak.'}
+};
+const mean = YS.reduce((a,b)=>a+b)/YS.length, SST = YS.reduce((s,y)=>s+(y-mean)**2,0);
+function r2(f, idx){ idx = idx||TS.map((_,i)=>i); const ys=idx.map(i=>YS[i]); const m=ys.reduce((a,b)=>a+b)/ys.length;
+  const sst=ys.reduce((s,y)=>s+(y-m)**2,0), sse=idx.reduce((s,i)=>s+(YS[i]-f(TS[i]))**2,0); return {r2:1-sse/sst, sse}; }
+MODELS.quad.r2=r2(MODELS.quad.f).r2; MODELS.exp.r2=r2(MODELS.exp.f).r2; MODELS.lin.r2=r2(MODELS.lin.f).r2;
+const twoF=t=>t<=24?0.1621*t+99.69:-0.1743*t+107.86;
+MODELS.two.r2=r2(twoF).r2;
+MODELS.two.r2sub=[r2(MODELS.two.pieces[0].f,TS.map((t,i)=>t<=24?i:-1).filter(i=>i>=0)).r2, r2(MODELS.two.pieces[1].f,TS.map((t,i)=>t>=26?i:-1).filter(i=>i>=0)).r2];
+
+const S = { tab:'models', show:{quad:true,exp:true,lin:false,two:false}, resid:'none',
+  t:23.75, t1:0, t2:24, k:98.6, a:-0.004, h:20, kk:102.2, best:false, hover:null };
+
+// ---------- chart geometry ----------
+let W=760,H=430,TK=4; const ML=46,MR=66,MT=14,MB=46, X0=0,X1=50, Y0=96,Y1=105;
+function sizeChart(){ const n=$('#chart').getBoundingClientRect().width<560; W=n?460:760; H=n?400:430; TK=n?8:4; $('#chart').setAttribute('viewBox',`0 0 ${W} ${H}`); }
+const X=t=>ML+(t-X0)/(X1-X0)*(W-ML-MR), Y=v=>MT+(Y1-v)/(Y1-Y0)*(H-MT-MB);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function path(f,a,b,step=0.25){ let d=''; for(let t=a;t<=b+1e-9;t+=step){ d+=(d?'L':'M')+X(t).toFixed(1)+','+Y(f(t)).toFixed(1);} return d; }
+function line(x1,y1,x2,y2,stroke,w=1,dash='',extra=''){return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${w}" ${dash?`stroke-dasharray="${dash}"`:''} ${extra}/>`;}
+function txt(x,y,s,fill,anchor='start',size=12,weight=400,extra=''){return `<text x="${x}" y="${y}" fill="${fill}" font-size="${size}" font-weight="${weight}" text-anchor="${anchor}" font-family="Atkinson Hyperlegible, system-ui, sans-serif" ${extra}>${s}</text>`;}
+function labelBox(x,y,s,fg,bg,anchor='start'){ const w=s.length*7.7+12; const bx=anchor==='end'?x-w:anchor==='middle'?x-w/2:x;
+  return `<rect x="${bx}" y="${y-15}" width="${w}" height="20" rx="3" fill="${bg}" stroke="${fg}" stroke-width="1"/>`+`<text x="${bx+6}" y="${y-1}" fill="${fg}" font-size="12.5" font-family="JetBrains Mono, ui-monospace, monospace" font-weight="700">${s}</text>`; }
+
+function render(){
+  const ink=css('--ink'),muted=css('--muted'),faint=css('--faint'),grid=css('--grid'),line_=css('--line'),surf=css('--surface'),gold=css('--goldink'),fever=css('--fever');
+  let g=`<defs><clipPath id="plot"><rect x="${ML}" y="${MT}" width="${W-ML-MR}" height="${H-MT-MB}"/></clipPath></defs>`;
+  g+=`<rect x="0" y="0" width="${W}" height="${H}" fill="${surf}"/>`;
+  for(let v=Y0;v<=Y1;v++){ g+=line(ML,Y(v),W-MR,Y(v),grid,1); g+=txt(ML-8,Y(v)+4,v,muted,'end',12); }
+  for(let t=0;t<=48;t+=TK){ g+=line(X(t),MT,X(t),H-MB,grid,1); g+=txt(X(t),H-MB+18,t,muted,'middle',12); }
+  g+=line(ML,H-MB,W-MR,H-MB,line_,1);
+  g+=txt((ML+W-MR)/2,H-8,'Time t (hours since first reading)',muted,'middle',12.5);
+  g+=txt(14,(MT+H-MB)/2,'Temperature (°F)',muted,'middle',12.5,400,`transform="rotate(-90 14 ${(MT+H-MB)/2})"`);
+  // reference lines
+  g+=line(ML,Y(SP),W-MR+4,Y(SP),gold,1.5,'7 5');
+  g+=txt(W-MR+8,Y(SP)+4,'98.6 °F',gold,'start',12,700)+txt(W-MR+8,Y(SP)+18,'set point',gold,'start',11.5);
+  g+=line(ML,Y(FT),W-MR+4,Y(FT),faint,1,'2 4');
+  g+=txt(W-MR+8,Y(FT)+4,'100.4 °F',muted,'start',12,700)+txt(W-MR+8,Y(FT)+18,'fever line',muted,'start',11.5);
+  let body='', top='';
+  const tab=S.tab;
+  // model curves
+  const drawModel=(key,col,w=2.25)=>{ const m=MODELS[key];
+    if(m.pieces){ m.pieces.forEach(p=>body+=`<path d="${path(p.f,p.dom[0],p.dom[1])}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>`); }
+    else body+=`<path d="${path(m.f,m.dom[0],m.dom[1])}" fill="none" stroke="${col}" stroke-width="${w}" ${m.dash?`stroke-dasharray="${m.dash}"`:''} stroke-linecap="round"/>`; };
+  if(tab==='models'){
+    ['exp','lin','two','quad'].forEach(k=>{ if(S.show[k]) drawModel(k,css(MODELS[k].color)); });
+    if(S.resid!=='none'){ const f=S.resid==='two'?twoF:MODELS[S.resid].f; const col=css(MODELS[S.resid].color);
+      D.forEach(([t,v])=>{ body+=line(X(t),Y(v),X(t),Y(f(t)),col,1.5,'3 2'); }); }
+  }
+  if(tab==='walk'){
+    drawModel('quad',css('--s1'));
+    const t=S.t, fv=MODELS.quad.f(t), r=2*QA*t+QB;
+    body+=line(X(t),MT,X(t),H-MB,muted,1,'3 3');
+    body+=`<line x1="${X(t)}" y1="${Y(SP)}" x2="${X(t)}" y2="${Y(fv)}" stroke="${fever}" stroke-width="5" stroke-linecap="round" opacity=".85"/>`;
+    const dev=Math.abs(fv-SP).toFixed(2);
+    const lx = t>36?X(t)-10:X(t)+10, an=t>36?'end':'start';
+    top+=labelBox(lx,(Y(SP)+Y(fv))/2+5,`|f(t) − 98.6| = ${dev}`,fever,surf,an);
+    const dt=5; body+=line(X(t-dt),Y(fv-r*dt),X(t+dt),Y(fv+r*dt),ink,1.5,'5 3');
+    body+=`<circle cx="${X(t)}" cy="${Y(fv)}" r="7" fill="${css('--s1')}" stroke="${surf}" stroke-width="2"/>`;
+    top+=labelBox(X(t)+(t>36?-10:10),Y(fv)-14,`f(${+t.toFixed(2)}) = ${fv.toFixed(2)} °F`,ink,surf,t>36?'end':'start');
+  }
+  if(tab==='rate'){
+    drawModel('two',css('--s3'));
+    const [a,b]=[Math.min(S.t1,S.t2),Math.max(S.t1,S.t2)], ya=YS[TS.indexOf(a)], yb=YS[TS.indexOf(b)];
+    if(a!==b){
+      body+=line(X(a),Y(ya),X(b),Y(ya),muted,1.25,'4 3'); body+=line(X(b),Y(ya),X(b),Y(yb),muted,1.25,'4 3');
+      body+=line(X(a),Y(ya),X(b),Y(yb),fever,2.5,'',`stroke-linecap="round"`);
+      body+=txt((X(a)+X(b))/2,Y(ya)+(yb>=ya?16:-8),`Δt = ${b-a} hr`,muted,'middle',12,700);
+      const dy=(yb-ya); body+=txt(X(b)+(b>40?-8:8),(Y(ya)+Y(yb))/2+4,`ΔT = ${dy>=0?'+':''}${dy.toFixed(1)}`,muted,b>40?'end':'start',12,700);
+      [[a,ya],[b,yb]].forEach(([t,v])=>body+=`<circle cx="${X(t)}" cy="${Y(v)}" r="7.5" fill="none" stroke="${fever}" stroke-width="2.5"/>`);
+    }
+  }
+  if(tab==='inv'){
+    drawModel('quad',css('--s1'));
+    body+=line(ML,Y(S.k),W-MR,Y(S.k),fever,2,'',``);
+    top+=labelBox(ML+8,Y(S.k)-8,`f(t) = ${S.k.toFixed(1)}`,fever,surf);
+    invRoots(S.k).forEach(r=>{ if(r.t>=X0-0 && r.t<=X1){ body+=line(X(r.t),Y(S.k),X(r.t),H-MB,fever,1.25,'4 3');
+      body+=`<circle cx="${X(r.t)}" cy="${Y(S.k)}" r="7" fill="${r.ok?fever:surf}" stroke="${fever}" stroke-width="2"/>`;
+      top+=labelBox(X(r.t),H-MB-8,`t ≈ ${r.t.toFixed(2)}`,fever,surf,r.t>40?'end':r.t<6?'start':'middle'); }
+      else if(r.t<X0){ top+=txt(ML+6,H-MB-10,`← other root t ≈ ${r.t.toFixed(2)} (before data)`,muted,'start',12,700); } });
+  }
+  if(tab==='build'){
+    if(S.best) body+=`<path d="${path(MODELS.quad.f,0,50)}" fill="none" stroke="${faint}" stroke-width="2" stroke-dasharray="6 5"/>`;
+    const f=t=>S.a*(t-S.h)**2+S.kk;
+    D.forEach(([t,v])=>{ body+=line(X(t),Y(v),X(t),Y(f(t)),css('--s7'),1.25,'3 2'); });
+    body+=`<path d="${path(f,0,50)}" fill="none" stroke="${css('--s7')}" stroke-width="2.5" stroke-linecap="round"/>`;
+    body+=`<circle cx="${X(S.h)}" cy="${Y(S.kk)}" r="6" fill="${surf}" stroke="${css('--s7')}" stroke-width="2.5"/>`;
+    top+=labelBox(X(S.h)+(S.h>36?-10:10),Y(S.kk)-12,`vertex (${S.h}, ${S.kk.toFixed(2)})`,css('--s7'),surf,S.h>36?'end':'start');
+  }
+  // data points
+  D.forEach(([t,v],i)=>{ const hov=S.hover===i;
+    body+=`<circle cx="${X(t)}" cy="${Y(v)}" r="${hov?7:4.75}" fill="${ink}" stroke="${surf}" stroke-width="2"/>`; });
+  g+=`<g clip-path="url(#plot)">${body}</g>${top}`;
+  if(S.hover!=null){ const t=TS[S.hover]; g=g.replace('<g clip-path',`${line(X(t),MT,X(t),H-MB,muted,1,'2 3')}<g clip-path`); }
+  g+=`<rect id="hit" x="${ML}" y="${MT}" width="${W-ML-MR}" height="${H-MT-MB}" fill="transparent"/>`;
+  $('#chart').innerHTML=g;
+}
+
+// ---------- legend ----------
+function legend(){
+  const L=[`<span><i class="dot"></i>Recorded temp</span>`];
+  const sw=(c,d)=>`<i class="sw" style="background:${d?`repeating-linear-gradient(90deg,var(${c}) 0 5px,transparent 5px 9px)`:`var(${c})`}"></i>`;
+  if(S.tab==='models') ['quad','exp','lin','two'].forEach(k=>{ if(S.show[k]) L.push(`<span>${sw(MODELS[k].color,MODELS[k].dash)}${MODELS[k].name}</span>`); });
+  if(S.tab==='walk'||S.tab==='inv') L.push(`<span>${sw('--s1')}Quadratic model</span>`);
+  if(S.tab==='walk') L.push(`<span>${sw('--fever')}Deviation from set point</span>`);
+  if(S.tab==='rate') L.push(`<span>${sw('--s3')}Phase lines</span>`,`<span>${sw('--fever')}Secant (average rate)</span>`);
+  if(S.tab==='build'){ L.push(`<span>${sw('--s7')}Your parabola</span>`); if(S.best) L.push(`<span>${sw('--faint',1)}Desmos best fit</span>`); }
+  $('#legend').innerHTML=L.join('');
+}
+
+// ---------- math helpers ----------
+function invRoots(k){ const a=QA,b=QB,c=QC-k, Dd=b*b-4*a*c; if(Dd<0) return [];
+  const r1=(-b+Math.sqrt(Dd))/(2*a), r2=(-b-Math.sqrt(Dd))/(2*a);
+  return [r1,r2].sort((x,y)=>x-y).map(t=>({t, ok:t>=0})); }
+const f2=x=>x.toFixed(2), sgn=x=>(x>=0?'+ ':'− ')+Math.abs(x);
+
+// ---------- panels ----------
+function panel(live){
+  const P=$('#panel'); let h='';
+  if(S.tab==='models'){
+    h+=`<div><h3>Which model fits best?</h3><p class="note">Turn models on and off. R² is the share of the temperature changes the model explains (1 = perfect, 0 = nothing).</p></div><div class="mods">`;
+    ['quad','exp','lin','two'].forEach(k=>{ const m=MODELS[k], pct=Math.max(0,m.r2);
+      h+=`<label class="mod" for="m_${k}"><input type="checkbox" id="m_${k}" data-m="${k}" ${S.show[k]?'checked':''}>
+        <div><div class="nm"><i class="sw" style="background:var(${m.color})"></i>${m.name}</div>
+        <div class="eqs">${m.eq}</div>
+        <div class="r2">R² = ${k==='two'?`${m.r2sub[0].toFixed(3)} (rise) · ${m.r2sub[1].toFixed(3)} (fall)`:m.r2.toFixed(4)}</div>
+        <div class="meter"><i style="width:${(k==='two'?m.r2:pct)*100}%;background:var(${m.color})"></i></div></div>
+        <div class="why">${m.why}</div></label>`; });
+    h+=`</div><div class="ctl"><label for="resid">Show residuals (data − model) for</label>
+      <select id="resid"><option value="none">None</option><option value="quad">Quadratic</option><option value="exp">Exponential</option><option value="lin">One line</option><option value="two">Two lines</option></select></div>
+      <p class="hint">Short residual lines mean the model is close to the data. Compare the quadratic's residuals with the exponential's.</p>`;
+  }
+  if(S.tab==='walk'){
+    const t=S.t, fv=MODELS.quad.f(t), r=2*QA*t+QB, near=D.reduce((b,d)=>Math.abs(d[0]-t)<Math.abs(b[0]-t)?d:b);
+    const st=Math.abs(r)<0.03?['flat','Leveling off']:r>0?['up','Rising']:['down','Falling'];
+    h+=`<div><h3>Walk along f(t)</h3><p class="note">Drag the slider to move through the 48 hours. The red bar is the deviation from the set point. The dashed line is the slope of the curve at that moment.</p></div>
+      <div class="ctl"><label for="t">Time t <output>${t.toFixed(2)} hr</output></label><input type="range" id="t" min="0" max="48" step="0.25" value="${t}"></div>
+      <div class="chips"><button class="chipbtn" data-t="0">t = 0</button><button class="chipbtn" data-t="23.75">Peak: t = −b/2a</button><button class="chipbtn" data-t="48">t = 48</button></div>
+      <div class="read">
+        <div class="stat"><div class="l">Model f(t)</div><div class="v">${f2(fv)} °F</div><div class="s">Recorded at hr ${near[0]}: ${near[1].toFixed(1)} °F</div></div>
+        <div class="stat"><div class="l">Deviation |f(t) − 98.6|</div><div class="v">${f2(Math.abs(fv-SP))} °F</div><div class="s">${fv>=FT?'<span class="pill up">Above fever line</span>':'<span class="pill ok">Below 100.4 °F</span>'}</div></div>
+        <div class="stat wide"><div class="l">Rate of change right now (slope of the curve)</div><div class="v">${r>=0?'+':''}${r.toFixed(3)} °F/hr &nbsp;<span class="pill ${st[0]}">${st[1]}</span></div><div class="s">Slope of a parabola at t is 2at + b = 2(−0.00680416)(${t.toFixed(2)}) + 0.323215</div></div>
+      </div>
+      <div class="work"><div>Peak (vertex): t = −b / (2a)</div><div>= −0.323215 / (2 × −0.00680416) ≈ <b>23.75 hr</b></div><div>f(23.75) ≈ <b>102.94 °F</b> → max deviation ≈ <b>4.34 °F</b></div></div>
+      <p class="hint">${Math.abs(t-23.75)<0.3?'At the vertex the slope is about 0. The body is holding steady at its new, higher set point.':'Slide to the peak. What happens to the slope and the red bar there?'}</p>`;
+  }
+  if(S.tab==='rate'){
+    const [a,b]=[Math.min(S.t1,S.t2),Math.max(S.t1,S.t2)], ya=YS[TS.indexOf(a)], yb=YS[TS.indexOf(b)], ar=a===b?0:(yb-ya)/(b-a);
+    const opts=v=>TS.map(t=>`<option value="${t}" ${t===v?'selected':''}>hr ${t} (${YS[TS.indexOf(t)].toFixed(1)} °F)</option>`).join('');
+    h+=`<div><h3>Average rate of change</h3><p class="note">Pick two readings. The red secant line connects them. Its slope is the average rate of change between those hours.</p></div>
+      <div class="row"><div class="ctl"><label for="t1">From</label><select id="t1">${opts(S.t1)}</select></div><div class="ctl"><label for="t2">To</label><select id="t2">${opts(S.t2)}</select></div></div>
+      <div class="chips"><button class="chipbtn" data-r="0,24">Rise: 0 → 24</button><button class="chipbtn" data-r="24,48">Fall: 24 → 48</button><button class="chipbtn" data-r="18,30">Plateau: 18 → 30</button><button class="chipbtn" data-r="0,48">Whole episode</button></div>
+      <div class="work"><div>ΔT / Δt = (${yb.toFixed(1)} − ${ya.toFixed(1)}) / (${b} − ${a})</div><div>= ${(yb-ya).toFixed(1)} / ${b-a||'—'} = <b>${a===b?'pick two different hours':(ar>=0?'+':'')+ar.toFixed(4)+' °F/hr'}</b></div></div>
+      <div class="read">
+        <div class="stat"><div class="l">Rising line slope</div><div class="v">+0.1621</div><div class="s">°F per hr, hours 0–24, R² = ${MODELS.two.r2sub[0].toFixed(3)}</div></div>
+        <div class="stat"><div class="l">Falling line slope</div><div class="v">−0.1743</div><div class="s">°F per hr, hours 26–48, R² = ${MODELS.two.r2sub[1].toFixed(3)}</div></div>
+      </div>
+      <p class="hint">Compare sizes, not signs: |−0.1743| > 0.1621, so recovery was slightly faster than onset. The falling line's intercept (107.86) only makes sense for hours 26–48; using it at t = 0 is extrapolation.</p>`;
+  }
+  if(S.tab==='inv'){
+    const k=S.k, c=QC-k, Dd=QB*QB-4*QA*c, rs=invRoots(k);
+    h+=`<div><h3>Solve f(t) = target</h3><p class="note">Evaluating asks “what temperature at hour t?” Solving backwards, f⁻¹(T), asks “at what hour does the temperature equal T?”</p></div>
+      <div class="ctl"><label for="k">Target temperature <output>${k.toFixed(1)} °F</output></label><input type="range" id="k" min="97" max="104" step="0.1" value="${k}"></div>
+      <div class="chips"><button class="chipbtn" data-k="98.6">98.6 set point</button><button class="chipbtn" data-k="99.1">99.1 (within 0.5°)</button><button class="chipbtn" data-k="100.4">100.4 fever line</button><button class="chipbtn" data-k="103.5">103.5</button></div>
+      <div class="work">
+        <div>−0.00680416t² + 0.323215t + 99.1053 = ${k.toFixed(1)}</div>
+        <div>−0.00680416t² + 0.323215t ${sgn(+c.toFixed(4))} = 0</div>
+        <div>discriminant b² − 4ac = ${Dd.toFixed(5)}</div>
+        ${Dd<0?'<div><b>Negative → no real solution.</b> The model never reaches this temperature.</div>':
+        `<div>t = (−b ± √(b² − 4ac)) / (2a)</div>${rs.map(r=>`<div>t ≈ <b>${r.t.toFixed(2)} hr</b> → ${r.t<0?'before the first reading: reject':r.t>48?'after last reading (prediction)':r.t<=23.75?'on the way up':'on the way down (recovery)'}</div>`).join('')}`}
+      </div>
+      <p class="hint">${Dd<0?'The peak of the model is about 102.94 °F, so any target above that has no answer.':k<=99.1?'For return-to-baseline questions, keep the root after the peak. The other root is outside the domain or on the rising side.':'A horizontal line can cross a parabola twice: once while the fever rises and once while it falls. Use the context to pick the one the question asks about.'}</p>`;
+  }
+  if(S.tab==='build'){
+    const f=t=>S.a*(t-S.h)**2+S.kk, R=r2(f), A=S.a, Bc=-2*S.a*S.h, Cc=S.a*S.h*S.h+S.kk;
+    h+=`<div><h3>Build your own parabola</h3><p class="note">Use vertex form f(t) = a(t − h)² + k. Try to beat Desmos: R² = 0.9939.</p></div>
+      <div class="ctl"><label for="ka">h: hour of the peak <output>${S.h}</output></label><input type="range" id="ka" min="0" max="48" step="0.25" value="${S.h}"></div>
+      <div class="ctl"><label for="kk">k: peak temperature <output>${S.kk.toFixed(2)} °F</output></label><input type="range" id="kk" min="99" max="105" step="0.05" value="${S.kk}"></div>
+      <div class="ctl"><label for="aa">a: how sharply it rises and falls <output>${S.a.toFixed(4)}</output></label><input type="range" id="aa" min="-0.02" max="0.004" step="0.0002" value="${S.a}"></div>
+      <div class="eq">f(t) = ${S.a.toFixed(4)}(t − ${S.h})² + ${S.kk.toFixed(2)}</div>
+      <div class="eq">= ${A.toFixed(5)}t² ${sgn(+Bc.toFixed(4))}t ${sgn(+Cc.toFixed(3))}</div>
+      <div class="read"><div class="stat"><div class="l">Your R²</div><div class="v">${R.r2.toFixed(4)}</div><div class="meter"><i style="width:${Math.max(0,R.r2)*100}%;background:var(--s7)"></i></div></div>
+        <div class="stat"><div class="l">Sum of squared residuals</div><div class="v">${R.sse.toFixed(2)}</div><div class="s">Smaller is better</div></div></div>
+      <label class="row" for="best" style="font-weight:700;font-size:14px"><input type="checkbox" id="best" ${S.best?'checked':''}> Show the Desmos best fit</label>
+      <p class="hint">${S.a>0?'With a > 0 the parabola opens upward and has a minimum. Does a fever have a lowest point or a highest point?':S.a===0?'With a = 0 it is a flat line, like the exponential model.':R.r2>0.99?'Excellent fit. Notice h ≈ 23.75 and k ≈ 102.94, the same peak Desmos found.':'Each parameter has a body meaning: h is when the fever peaked, k is how high it got, and a sets how quickly temperature climbed and recovered.'}</p>`;
+  }
+  h+=wordsHTML(S.tab);
+  if(live){ // keep the slider being dragged; refresh only readouts
+    const tmp=document.createElement('div'); tmp.innerHTML=h; const sel='output,.read,.work,.hint,.eq';
+    const a=P.querySelectorAll(sel), b=tmp.querySelectorAll(sel);
+    if(a.length===b.length){ a.forEach((el,i)=>{ el.innerHTML=b[i].innerHTML; }); return; }
+  }
+  P.innerHTML=h; bindPanel();
+}
+function bindPanel(){
+  const on=(sel,ev,fn)=>document.querySelectorAll(sel).forEach(e=>e.addEventListener(ev,fn));
+  on('[data-m]','change',e=>{S.show[e.target.dataset.m]=e.target.checked; update(false);});
+  const rs=$('#resid'); if(rs){rs.value=S.resid; rs.onchange=e=>{S.resid=e.target.value; if(S.resid!=='none') S.show[S.resid]=true; update();};}
+  const live=(id,key)=>{const el=$('#'+id); if(el) el.oninput=e=>{S[key]=+e.target.value; update('live');};};
+  live('t','t'); live('k','k'); live('ka','h'); live('kk','kk'); live('aa','a');
+  on('[data-t]','click',e=>{S.t=+e.currentTarget.dataset.t; update();});
+  on('[data-k]','click',e=>{S.k=+e.currentTarget.dataset.k; update();});
+  on('[data-r]','click',e=>{const [a,b]=e.currentTarget.dataset.r.split(',').map(Number); S.t1=a; S.t2=b; update();});
+  const t1=$('#t1'), t2=$('#t2'); if(t1){t1.onchange=e=>{S.t1=+e.target.value;update();}; t2.onchange=e=>{S.t2=+e.target.value;update();};}
+  const bst=$('#best'); if(bst) bst.onchange=e=>{S.best=e.target.checked; update();};
+}
+const TITLES={models:'Four models, one data set',walk:'Peak and deviation on the quadratic model',rate:'Rising vs. falling: average rate of change',inv:'Solving the model backwards: f⁻¹(T)',build:'Your parabola vs. the data'};
+function update(mode=true){
+  render(); legend(); $('#ctitle').textContent=TITLES[S.tab];
+  if(mode==='live') panel(true); else if(mode) panel(false);
+}
+window.addEventListener('resize',()=>{ const w=W; sizeChart(); if(w!==W) render(); });
+function setTab(t){ S.tab=t; document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t)); update(); }
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+
+// ---------- hover ----------
+const svg=$('#chart'), tip=$('#tip');
+function hover(ev){
+  const r=svg.getBoundingClientRect(), sx=(ev.clientX-r.left)/r.width*W;
+  if(sx<ML-10||sx>W-MR+10){ leave(); return; }
+  const t=X0+(sx-ML)/(W-ML-MR)*(X1-X0); let i=Math.round(t/2); i=Math.max(0,Math.min(D.length-1,i));
+  if(S.hover!==i){ S.hover=i; render(); }
+  const [tt,v]=D[i]; let rows=[`<b>Hour ${tt}</b>`,`Recorded ${v.toFixed(1)} °F`];
+  if(S.tab==='models') ['quad','exp','lin','two'].forEach(k=>{ if(S.show[k]){ const f=k==='two'?twoF:MODELS[k].f; if(k==='two'&&tt===24) return; rows.push(`${MODELS[k].name.split(' (')[0]}: ${f(tt).toFixed(2)}`);} });
+  if(['walk','inv'].includes(S.tab)) rows.push(`Quadratic: ${MODELS.quad.f(tt).toFixed(2)} (resid ${(v-MODELS.quad.f(tt)).toFixed(2)})`);
+  if(S.tab==='build'){ const f=S.a*(tt-S.h)**2+S.kk; rows.push(`Yours: ${f.toFixed(2)} (resid ${(v-f).toFixed(2)})`); }
+  rows.push(`|T − 98.6| = ${Math.abs(v-SP).toFixed(1)}`);
+  tip.innerHTML=rows.join('<br>'); tip.hidden=false;
+  const card=svg.parentElement.getBoundingClientRect();
+  let x=r.left-card.left+X(tt)/W*r.width, y=r.top-card.top+Y(v)/H*r.height-14;
+  const tw=tip.offsetWidth; x=Math.max(tw/2+6,Math.min(card.width-tw/2-6,x)); if(y-tip.offsetHeight<4) y=r.top-card.top+Y(v)/H*r.height+tip.offsetHeight+18;
+  tip.style.left=x+'px'; tip.style.top=y+'px';
+}
+function leave(){ tip.hidden=true; if(S.hover!=null){ S.hover=null; render(); } }
+svg.addEventListener('pointermove',hover); svg.addEventListener('pointerdown',hover); svg.addEventListener('pointerleave',leave);
+try{ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>render()); new MutationObserver(()=>render()).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']}); }catch(e){}
+
+// ---------- data table ----------
+(()=>{ const h=Math.ceil(D.length/2); let s='<tr><th>Time t (hr)</th><th>Temp (°F)</th><th>Time t (hr)</th><th>Temp (°F)</th></tr>';
+  const c=v=>v>=FT?' class="hi"':'';
+  for(let i=0;i<h;i++){ const a=D[i],b=D[i+h]; s+=`<tr><td>${a[0]}</td><td${c(a[1])}>${a[1].toFixed(1)}</td><td>${b?b[0]:''}</td><td${b?c(b[1]):''}>${b?b[1].toFixed(1):''}</td></tr>`; }
+  $('#data').innerHTML=s+'<caption style="caption-side:bottom;text-align:left;padding-top:6px;font-family:var(--body);color:var(--muted)">Red = above the 100.4 °F fever threshold</caption>'; })();
+
+// ---------- key ideas ----------
+const fq=t=>MODELS.quad.f(t);
+const DEFS=[
+ {id:'ft',term:'Function notation',sym:'f(t)',tab:'walk',
+  what:'f is the rule (here, the regression model). t is the input: hours since the first reading. f(t) is the output: the predicted temperature in °F. Read f(24) as “f of 24,” the model’s temperature at hour 24. It does not mean f times 24.',
+  calc:'Substitute the hour for t: f(24) = −0.00680416(24)² + 0.323215(24) + 99.1053',
+  ex:`f(24) ≈ ${fq(24).toFixed(2)} °F, while the recorded reading at hour 24 was 103.0 °F.`},
+ {id:'reg',term:'Regression curve',sym:'least-squares best fit',tab:'models',
+  what:'A regression curve is the one curve of a chosen type (line, parabola, exponential) that comes closest to all the data points at once. The calculator picks the coefficients that make the squared misses as small as possible. It summarizes the trend and lets you predict between and beyond the readings, but it is not expected to pass through every point.',
+  calc:'Choose a type → software finds a, b, c that minimize Σ(T − f(t))²',
+  ex:'Desmos’s best parabola is f(t) = −0.00680416t² + 0.323215t + 99.1053.'},
+ {id:'res',term:'Residual',sym:'T − f(t)',tab:'models',
+  what:'How far one data point is from the model: recorded value minus predicted value. Positive means the point sits above the curve; negative means below. Small residuals everywhere mean a good fit.',
+  calc:'residual = recorded T − f(t)',
+  ex:`Hour 12: 102.2 − f(12) = 102.2 − ${fq(12).toFixed(2)} = +${(102.2-fq(12)).toFixed(2)} °F.`},
+ {id:'r2',term:'Coefficient of determination',sym:'R²',tab:'models',
+  what:'R² is the share of the rise and fall in temperature that the model explains, from 0 (explains nothing) to 1 (explains everything). It compares the model’s squared residuals with how spread out the data is around its average. Do not confuse it with r, the correlation coefficient for a line; for a line, R² = r².',
+  calc:'R² = 1 − (Σ residual²) / (Σ (T − mean)²)',
+  ex:`Quadratic R² = ${MODELS.quad.r2.toFixed(4)} (≈ 99.4% explained). Exponential R² = ${MODELS.exp.r2.toFixed(4)} (≈ 0.15%).`},
+ {id:'abc',term:'Coefficients a, b, c',sym:'f(t) = at² + bt + c',tab:'build',
+  what:'a: its sign says which way the parabola opens (negative → opens down → has a peak); its size says how sharply the fever rises and falls. b: the slope at t = 0, how fast temperature was climbing at the first reading. c: the value at t = 0, the starting temperature.',
+  calc:'Vertex form a(t − h)² + k shows the peak directly: h = hour of the peak, k = peak temperature.',
+  ex:'a = −0.0068 (opens down), b = 0.323 °F/hr at the start, c = 99.11 °F at hour 0.'},
+ {id:'vtx',term:'Vertex (peak time)',sym:'t = −b / (2a)',tab:'walk',
+  what:'The turning point of a parabola. Its t-value is −b divided by 2a. When a is negative the vertex is the maximum, so it gives the time of the peak. Substitute that t back into f to get the peak temperature.',
+  calc:'t = −0.323215 / (2 × −0.00680416) ≈ 23.75;  f(23.75) ≈ 102.94',
+  ex:'The model peaks at about hour 23.75 at 102.94 °F. The raw data peaked at hour 24 at 103.0 °F.'},
+ {id:'delta',term:'Change and average rate',sym:'ΔT / Δt',tab:'rate',
+  what:'Δ (the Greek letter delta) means “change in”: later value minus earlier value. ΔT is the change in temperature (°F); Δt is the change in time (hours). Dividing gives the average rate of change, the slope of the straight secant line connecting two points.',
+  calc:'ΔT / Δt = (T₂ − T₁) / (t₂ − t₁)',
+  ex:'Hours 0 → 24: (103.0 − 99.1) / (24 − 0) = 3.9 / 24 ≈ +0.16 °F per hour.'},
+ {id:'slope',term:'Rate at an instant',sym:'2at + b',tab:'walk',
+  what:'The slope of the curve at one moment: how fast temperature is changing right then. Positive means rising, negative means falling, and 0 means leveling off (at the vertex). For a parabola this slope is 2at + b. In calculus this is called the derivative.',
+  calc:'rate at t = 2(−0.00680416)t + 0.323215',
+  ex:'At t = 0 it is +0.32 °F/hr; at t = 23.75 it is 0; at t = 48 it is −0.33 °F/hr.'},
+ {id:'abs',term:'Absolute value (deviation)',sym:'|f(t) − 98.6|',tab:'walk',
+  what:'|x| is the distance of x from 0, so it is never negative. |f(t) − 98.6| is how far the temperature is from the set point, whether above or below. Biologically, homeostasis cares about distance from the target in either direction.',
+  calc:'deviation = |f(t) − 98.6|',
+  ex:'Largest at the peak: |102.94 − 98.6| ≈ 4.34 °F.'},
+ {id:'inv',term:'Inverse function',sym:'f⁻¹(T)',tab:'inv',
+  what:'f answers “what temperature at hour t?” Its inverse answers the reverse: “at what hour is the temperature T?” Find it by setting f(t) = T and solving for t with the quadratic formula. A parabola can give two answers; keep the one that fits the question and the domain.',
+  calc:'t = (−b ± √(b² − 4a(c − T))) / (2a)',
+  ex:'f⁻¹(98.6) ≈ 49.02 hr (the other answer, −1.52, is before the data began).'},
+ {id:'dom',term:'Domain and extrapolation',sym:'0 ≤ t ≤ 48',tab:'rate',
+  what:'The domain is the set of t-values the model was built from. Predicting inside it is interpolation and is usually reliable. Predicting outside it is extrapolation and is less reliable, because nothing guarantees the pattern continues.',
+  calc:'Check: is the t you used between 0 and 48?',
+  ex:'The falling line’s intercept of 107.86 °F at t = 0 is meaningless, because that line was built only from hours 26–48.'},
+];
+$('#gloss').innerHTML=DEFS.map(d=>`<article class="card def" id="def-${d.id}"><div class="sym">${esc(d.sym)}</div><h3>${esc(d.term)}</h3><p>${esc(d.what)}</p><div class="work"><div>${esc(d.calc)}</div></div><p class="ex"><b>In Patient Zero’s fever</b><br>${esc(d.ex)}</p><button class="explore see" type="button" data-see="${d.tab}">See it in the explorer ↑</button></article>`).join('');
+document.querySelectorAll('[data-see]').forEach(b=>b.onclick=()=>{ setTab(b.dataset.see); $('#lab').scrollIntoView({behavior:'smooth'}); });
+const WORDS={models:['reg','r2','res'],walk:['ft','vtx','abs','slope'],rate:['delta','dom'],inv:['inv','dom'],build:['abc','r2','vtx']};
+function wordsHTML(tab){ return `<div class="words">Math words here: ${WORDS[tab].map(id=>{const d=DEFS.find(x=>x.id===id); return `<a href="#def-${id}">${esc(d.sym)}</a>`;}).join('')}</div>`; }
+
+// ---------- quiz: per-student versions ----------
+const EXPLORE=[ {tab:'models',label:'Compare models',set:{}}, {tab:'models',label:'Compare models',set:{}},
+  {tab:'walk',label:'Walk the curve',set:{t:23.75}}, {tab:'walk',label:'Walk the curve',set:{t:23.75}},
+  {tab:'rate',label:'Rising vs. falling',set:{t1:0,t2:24}}, {tab:'inv',label:'Solve backwards',set:{k:98.6}}, {tab:'walk',label:'Walk the curve',set:{t:24}} ];
+function hashStr(s){ let h=2166136261; for(const ch of s){ h^=ch.codePointAt(0); h=Math.imul(h,16777619); } return h>>>0; }
+function rng(seed){ return ()=>{ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+const pick=(r,arr)=>arr[Math.floor(r()*arr.length)];
+function shuffle(r,arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(r()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+const tempAt=h=>YS[TS.indexOf(h)];
+// build an MC item from a correct answer + candidate distractors (keeps the first 3 distinct ones)
+function mcq(prompt, correct, cands, explain, variant){ const seen=new Set([correct]); const opts=[correct];
+  for(const c of cands){ if(opts.length===4) break; if(!seen.has(c)){ seen.add(c); opts.push(c);} }
+  return {type:'mc', prompt, options:opts, answer:0, explain, variant:true}; }
+const n2=x=>x.toFixed(2), n3=x=>x.toFixed(3), sg=x=>(x>=0?'+':'−')+Math.abs(x).toFixed(3);
+const VARIANTS={
+  readT(r){ const h=pick(r,[2,4,6,8,10,12,14,16,18,20,22,26,28,30,32,34,36,38,40,42,44,46,48]), T=tempAt(h), d=Math.abs(T-SP);
+    const h2=h<48?h+2:h-2, T2=tempAt(h2);
+    return mcq(`From your plotted data, what was the recorded temperature at t = ${h} hr, and what was its deviation from the set point, |T − 98.6|?`,
+      `${T.toFixed(1)} °F; deviation ${d.toFixed(1)} °F`,
+      [`${T.toFixed(1)} °F; deviation ${Math.abs(T-FT).toFixed(1)} °F`, `${T2.toFixed(1)} °F; deviation ${Math.abs(T2-SP).toFixed(1)} °F`, `${T.toFixed(1)} °F; deviation −${d.toFixed(1)} °F`, `${T.toFixed(1)} °F; deviation ${(T+SP).toFixed(1)} °F`, `${(T+0.5).toFixed(1)} °F; deviation ${(d+0.5).toFixed(1)} °F`],
+      `The log shows ${T.toFixed(1)} °F at hour ${h}. |${T.toFixed(1)} − 98.6| = ${d.toFixed(1)} °F. Absolute value is a distance, so it is never negative, and the set point is 98.6 °F, not the 100.4 °F fever line.`); },
+  evalF(r){ const h=pick(r,[6,10,14,30,34,38,42]), v=fq(h), d=Math.abs(v-SP), bad=(-QA)*h*h+QB*h+QC;
+    return mcq(`Using the quadratic model f(t) = −0.00680416t² + 0.323215t + 99.1053, evaluate f(${h}) and find the deviation |f(${h}) − 98.6|.`,
+      `f(${h}) ≈ ${n2(v)} °F; deviation ≈ ${n2(d)} °F`,
+      [`f(${h}) ≈ ${n2(v)} °F; deviation ≈ ${n2(Math.abs(v-FT))} °F`, `f(${h}) ≈ ${n2(bad)} °F; deviation ≈ ${n2(Math.abs(bad-SP))} °F`, `f(${h}) ≈ ${n2(QB*h+QC)} °F; deviation ≈ ${n2(Math.abs(QB*h+QC-SP))} °F`, `f(${h}) ≈ ${n2(v)} °F; deviation ≈ ${n2(v+SP)} °F`],
+      `f(${h}) = −0.00680416(${h})² + 0.323215(${h}) + 99.1053 ≈ ${n2(v)} °F. Then |${n2(v)} − 98.6| ≈ ${n2(d)} °F. Common slips: dropping the negative sign on a, or forgetting the t² term.`); },
+  aroc(r){ const rising=r()<0.5, gap=pick(r,[6,8,10,12]); const lo=rising?0:26, hi=rising?24:48;
+    const a=lo+2*Math.floor(r()*((hi-gap-lo)/2+1)), b=a+gap, Ta=tempAt(a), Tb=tempAt(b), dT=Tb-Ta, ar=dT/gap;
+    return mcq(`Using the recorded data, what is the average rate of change of temperature from hour ${a} to hour ${b}?`,
+      `${sg(ar)} °F/hr`,
+      [`${sg(-ar)} °F/hr`, `${sg(dT)} °F/hr`, `${sg(dT/b)} °F/hr`, `${sg(gap/(dT||0.1))} °F/hr`],
+      `ΔT / Δt = (${Tb.toFixed(1)} − ${Ta.toFixed(1)}) / (${b} − ${a}) = ${dT>=0?'':'−'}${Math.abs(dT).toFixed(1)} / ${gap} ≈ ${sg(ar)} °F per hour. The sign tells you the direction: ${ar>=0?'positive, so the fever was rising.':'negative, so the temperature was falling.'}`); },
+  rate(r){ const h=pick(r,[4,8,12,16,32,36,40,44]), rt=2*QA*h+QB, dir=rt>=0?'Rising':'Falling', opp=rt>=0?'Falling':'Rising', half=QA*h+QB;
+    return mcq(`According to the quadratic model, is the temperature rising or falling at t = ${h} hr, and how fast? (The slope of the curve is 2at + b.)`,
+      `${dir} at about ${n3(Math.abs(rt))} °F/hr`,
+      [`${opp} at about ${n3(Math.abs(rt))} °F/hr`, `${(half>=0?'Rising':'Falling')} at about ${n3(Math.abs(half))} °F/hr`, `${dir} at about ${rt>=0?'0.174':'0.162'} °F/hr`, `${dir} at about ${n2(fq(h))} °F/hr`],
+      `Slope = 2(−0.00680416)(${h}) + 0.323215 ≈ ${sg(rt)} °F/hr. ${rt>=0?'Positive: still rising, because t is before the vertex at 23.75 hr.':'Negative: falling, because t is after the vertex at 23.75 hr.'} Forgetting the 2 in 2at gives ${n3(Math.abs(half))}.`); },
+  inv(r){ const K=pick(r,[99.5,99.8,100.0,100.8,101.2,101.6,102.0]), rs=invRoots(K).map(x=>x.t), up=rs[0], down=rs[1];
+    return mcq(`During recovery, when does the model predict the temperature falls back to ${K.toFixed(1)} °F? Solve f(t) = ${K.toFixed(1)}, that is, find f⁻¹(${K.toFixed(1)}) on the falling side.`,
+      `t ≈ ${n2(down)} hr`,
+      [`t ≈ ${n2(up)} hr`, `t ≈ 49.02 hr`, `t ≈ 23.75 hr`, `t ≈ ${n2(48-up)} hr`],
+      `Set −0.00680416t² + 0.323215t + 99.1053 = ${K.toFixed(1)} and use the quadratic formula: t ≈ ${n2(up)} or t ≈ ${n2(down)}. ${n2(up)} hr is on the way up; recovery is after the peak, so t ≈ ${n2(down)} hr. You can check it in the Solve backwards tab.`); }
+};
+// where each variant goes: [part index, prompt it replaces (or null to add), generator]
+const SLOTS=[[0,'What was the patient\'s temperature at t = 0','readT'],[3,null,'evalF'],[4,'Using the raw data, what is the average rate','aroc'],[4,null,'rate'],[5,'"Within 0.5 °F of baseline"','inv']];
+let Q=[], version='';
+function buildQuiz(name){
+  const seed=hashStr(name.toLowerCase().replace(/\s+/g,' ').trim()), r=rng(seed);
+  version=seed.toString(36).toUpperCase().slice(-5);
+  const parts=B.sections.map(s=>({...s, qs:s.qs.map(q=>({...q}))}));
+  SLOTS.forEach(([pi,starts,gen])=>{ const item=VARIANTS[gen](r); const qs=parts[pi].qs;
+    const at=starts?qs.findIndex(q=>q.prompt.startsWith(starts)):-1; if(at>=0) qs[at]=item; else qs.push(item); });
+  parts.forEach(p=>{ p.qs=shuffle(r,p.qs).map(q=>{ if(q.type!=='mc') return q;
+      const order=shuffle(r,q.options.map((_,i)=>i)); return {...q, options:order.map(i=>q.options[i]), answer:order.indexOf(q.answer)}; });
+    // keep written responses at the end of each part
+    p.qs=[...p.qs.filter(q=>q.type==='mc'),...p.qs.filter(q=>q.type!=='mc')]; });
+  let n=0; Q=[];
+  $('#quiz').innerHTML=`<p class="vcode">Version ${version} · ${esc(name)}</p>`+parts.map((s,si)=>`
+    <section class="part"><div class="parthead"><h3>${esc(s.title)}</h3><button class="explore" type="button" data-x="${si}">Explore: ${EXPLORE[si].label} ↑</button></div><p class="desc">${esc(s.desc)}</p>
+    ${s.qs.map(q=>{ const id='q'+(++n); Q.push({...q,id,n});
+      const head=`<div class="qp"><span class="n">${n}.</span><span>${esc(q.prompt)} <span class="pts">${q.type==='mc'?'1 pt':'3 pts'}</span></span></div>`;
+      if(q.type==='mc') return `<div class="q" id="${id}">${head}<div class="opts" role="radiogroup">${q.options.map((o,i)=>`<label class="opt" for="${id}_${i}"><input type="radio" name="${id}" id="${id}_${i}" value="${i}"><span>${'ABCD'[i]}. ${esc(o)}</span></label>`).join('')}</div><div class="fb" hidden></div></div>`;
+      return `<div class="q" id="${id}">${head}<div class="paraw"><textarea id="${id}_t" aria-label="Your answer to question ${n}"></textarea></div><div class="fb" hidden></div></div>`;
+    }).join('')}</section>`).join('');
+  document.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{ const x=EXPLORE[+b.dataset.x]; Object.assign(S,x.set); if(x.tab==='models'){S.show={quad:true,exp:true,lin:false,two:false};} setTab(x.tab); $('#lab').scrollIntoView({behavior:'smooth'}); });
+  $('#qbar').hidden=false;
+}
+$('#start').onclick=()=>{ const name=$('#sname').value.trim();
+  if(name.split(/\s+/).length<2){ $('#gatenote').textContent='Enter your first and last name, then press Start my quiz.'; $('#sname').focus(); return; }
+  $('#sname').readOnly=true; $('#start').disabled=true; buildQuiz(name); $('#gatenote').textContent='Your version is ready below.'; };
+$('#sname').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#start').click(); });
+
+function grade(){
+  const name=$('#sname').value.trim();
+  const un=Q.filter(q=>q.type==='mc'&&!document.querySelector(`input[name=${q.id}]:checked`)).map(q=>q.n);
+  if(un.length){$('#msg').textContent='Answer every multiple-choice question first. Missing: '+un.join(', ');document.getElementById('q'+un[0]).scrollIntoView({behavior:'smooth',block:'center'});return;}
+  $('#msg').textContent='';
+  let right=0,total=0; const lines=[B.title,`Student: ${name}`,`Version: ${version}`,''];
+  Q.forEach(q=>{ const el=document.getElementById(q.id), fb=el.querySelector('.fb');
+    if(q.type==='mc'){ total++; const pk=+document.querySelector(`input[name=${q.id}]:checked`).value, ok=pk===q.answer; if(ok) right++;
+      el.querySelectorAll('.opt').forEach((o,i)=>{o.classList.toggle('right',i===q.answer);o.classList.toggle('wrong',i===pk&&!ok);});
+      el.querySelectorAll('input').forEach(i=>i.disabled=true);
+      fb.innerHTML=`<span class="tag ${ok?'y':'n'}">${ok?'Correct':'Not quite'}</span> ${esc(q.explain)}`;
+      lines.push(`${q.n}. ${ok?'✓':'✗'} ${q.prompt.length>90&&!q.variant?q.prompt.slice(0,90)+'…':q.prompt}`, `    Answered: ${q.options[pk]}${ok?'':'  |  Correct: '+q.options[q.answer]}`);
+    } else { const t=document.getElementById(q.id+'_t'); t.readOnly=true;
+      fb.innerHTML=`<span class="tag y">Compare with a strong answer</span> ${esc(q.sample)}`;
+      lines.push(`${q.n}. Written: ${q.prompt.slice(0,80)}…`, t.value.trim()||'(blank)'); }
+    fb.hidden=false; });
+  const pct=Math.round(100*right/total);
+  $('#big').textContent=`${right} / ${total}  (${pct}%)`;
+  $('#sub').textContent='Your 3 written responses (9 points) will be scored by your teacher with the PCED rubric. Your results are sent to your teacher automatically.';
+  lines.splice(3,0,`Multiple choice: ${right}/${total} (${pct}%)`);
+  sendToTeacher(name, `${right}/${total} (${pct}%)`, lines.join('\n'));
+  $('#out').value=lines.join('\n'); $('#score').hidden=false; $('#submit').disabled=true; $('#score').scrollIntoView({behavior:'smooth'});
+}
+function sendToTeacher(student, score, results){
+  const el=$('#sent'); el.textContent='Sending your results to your teacher…';
+  const body=new URLSearchParams({'form-name':'fever-quiz', student, version, mc_score:score, subject:`Fever quiz: ${student} ${score}`, results});
+  fetch('/',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()})
+    .then(r=>{ if(!r.ok) throw new Error(r.status); el.innerHTML='<span class="pill ok">Sent</span> Your teacher has your results. You can also copy them below.'; })
+    .catch(()=>{ el.textContent='Your results could not be sent automatically. Press Copy my results and submit them the way your teacher asked.'; });
+}
+$('#submit').onclick=grade; $('#reset').onclick=()=>location.reload();
+$('#copy').onclick=()=>{ const t=$('#out').value; const fb=()=>{const o=$('#out');o.hidden=false;o.select();$('#copied').textContent='Select all and copy the text box below.';};
+  try{ navigator.clipboard.writeText(t).then(()=>{$('#copied').textContent='Copied. Paste it into your assignment.';},fb);}catch(e){fb();} };
+
+sizeChart(); setTab('models');
+</script>
+
+</body>
+</html>
